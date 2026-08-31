@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+:root {
+  --md-canvas: #e8eeeb;
+  --md-page: #f5faf8;
+  --md-paper: #f8f8f8;
+  --md-ink: #1f2937;
+  --md-muted: #6b7280;
+  --md-line: #e5e7eb;
+  --md-green: #198754;
+  --md-green-deep: #146c43;
+  --md-mint: #d1fae5;
+  --md-mint-soft: #eef2f1;
+  --md-danger: #dc2626;
+}
+
+@theme inline {
+  --color-md-canvas: var(--md-canvas);
+  --color-md-page: var(--md-page);
+  --color-md-paper: var(--md-paper);
+  --color-md-ink: var(--md-ink);
+  --color-md-muted: var(--md-muted);
+  --color-md-line: var(--md-line);
+  --color-md-green: var(--md-green);
+  --color-md-green-deep: var(--md-green-deep);
+  --color-md-mint: var(--md-mint);
+  --color-md-mint-soft: var(--md-mint-soft);
+  --color-md-danger: var(--md-danger);
+  --font-sans: var(--font-inter);
+  --font-headline: var(--font-oswald);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--md-canvas);
+  color: var(--md-ink);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+a {
+  color: var(--md-green);
+}
+
+a:hover {
+  color: var(--md-green-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--md-green-deep);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.md-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.md-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+@keyframes md-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes md-shimmer {
+  0% {
+    background-position: -320px 0;
+  }
+  100% {
+    background-position: 320px 0;
+  }
+}
+
+@keyframes md-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.md-pulse {
+  animation: md-pulse 1.6s ease-in-out infinite;
+}
+
+.md-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    #eef2f1 8%,
+    #f8fafa 22%,
+    #eef2f1 36%
+  );
+  background-size: 320px 100%;
+  animation: md-shimmer 1.3s linear infinite;
+}
+
+.md-fade {
+  animation: md-fade 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
