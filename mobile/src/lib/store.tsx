@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useAuth } from "@/src/lib/auth";
 import { loadFixturesForGw } from "@/src/lib/football/fixtures";
+import { isMockFixtureId } from "@/src/lib/football/mock-ids";
 import { loadSeasonResults, type FinishedResult } from "@/src/lib/football/results";
 import {
   createLeagueRemote,
@@ -154,6 +155,9 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const savePickRemote = useCallback(
     async (fixtureId: string, homeScore: number, awayScore: number, gameweek: number) => {
       if (!user) return;
+      if (isMockFixtureId(fixtureId)) {
+        throw new Error("Cannot save picks for demo fixtures.");
+      }
       const { error } = await supabase.from("picks").upsert(
         {
           user_id: user.id,
@@ -183,7 +187,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         migrated.current = true;
         for (const fixtureId of legacyIds) {
           const scores = legacy[fixtureId];
-          if (!scores) continue;
+          if (!scores || isMockFixtureId(fixtureId)) continue;
           try {
             await savePickRemote(fixtureId, scores[0], scores[1], gwRef.current);
           } catch {

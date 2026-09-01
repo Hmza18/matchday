@@ -18,12 +18,7 @@ async function enrichEvents(match: LiveMatch): Promise<LiveEvent[]> {
 
 export async function loadLiveCentre() {
   if (MOCK_MODE) return mockLiveCentre();
-  try {
-    return await fetchLiveCentre();
-  } catch (error) {
-    console.warn(`[api] live centre unavailable, serving bundled data: ${String(error)}`);
-    return mockLiveCentre();
-  }
+  return fetchLiveCentre();
 }
 
 async function fetchLiveCentre() {
