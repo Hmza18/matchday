@@ -25,6 +25,11 @@ import {
 } from "@/src/lib/leagues";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 import type { PickFixture } from "@/src/lib/football/types";
+import {
+  gameweekForStoredPick,
+  mergePicks,
+  picksToUpload,
+} from "@/src/lib/pick-sync";
 import type {
   BoardRow,
   ChatMessage,
@@ -96,13 +101,13 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const [seasonResults, setSeasonResults] = useState<FinishedResult[]>([]);
   const [premiumUnlocked, setPremiumUnlocked] = useState(false);
   const hydrated = useRef(false);
-  const migrated = useRef(false);
   const popTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const saveErrorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const fixturesRef = useRef<PickFixture[]>([]);
   const gwRef = useRef(gw);
+  const picksRef = useRef(picks);
   const legacyPicksRef = useRef<Record<string, [number, number]>>({});
   const persistedLeagueId = useRef<string | null>(null);
   const resultsRef = useRef<FinishedResult[]>([]);
@@ -112,6 +117,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     gwRef.current = gw;
   }, [gw]);
+
+  useEffect(() => {
+    picksRef.current = picks;
+  }, [picks]);
 
   const activeLeague = useMemo(
     () => leagues.find((league) => league.id === activeLeagueId) ?? leagues[0] ?? null,
@@ -170,33 +179,30 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   );
 
   const loadPicks = useCallback(async () => {
-    // Signed out: the locally cached picks stay on screen. They are pushed up
-    // on the next sign-in by the migration branch below.
+    // Signed out: keep whatever is on device. Sign-in merges it up.
     if (!user) return;
 
     try {
       const remotePicks = await fetchRemotePicks();
-      const legacy = legacyPicksRef.current;
-      const legacyIds = Object.keys(legacy);
+      // Guest edits live in state; the cache ref is only the value at hydrate.
+      const localPicks = { ...legacyPicksRef.current, ...picksRef.current };
+      const pending = picksToUpload(localPicks, remotePicks);
 
-      if (!migrated.current && legacyIds.length > 0 && Object.keys(remotePicks).length === 0) {
-        migrated.current = true;
-        for (const fixtureId of legacyIds) {
-          const scores = legacy[fixtureId];
-          if (!scores) continue;
-          try {
-            await savePickRemote(fixtureId, scores[0], scores[1], gwRef.current);
-          } catch {
-            // skip locked fixtures during migration
-          }
+      for (const [fixtureId, scores] of Object.entries(pending)) {
+        const fixture = fixturesRef.current.find((item) => item.id === fixtureId);
+        const gameweek = gameweekForStoredPick(fixture?.round, gwRef.current);
+        try {
+          await savePickRemote(fixtureId, scores[0], scores[1], gameweek);
+        } catch {
+          // Keep the local row; mergePicks retains ids the server still lacks.
         }
-        legacyPicksRef.current = {};
-        setPicks(await fetchRemotePicks());
-        return;
       }
 
-      migrated.current = true;
-      setPicks(remotePicks);
+      const confirmed =
+        Object.keys(pending).length > 0 ? await fetchRemotePicks() : remotePicks;
+      // Re-read state so a bump during the network round-trip is not dropped.
+      setPicks(mergePicks({ ...localPicks, ...picksRef.current }, confirmed));
+      legacyPicksRef.current = {};
     } catch (error) {
       setPickSaveError(
         error instanceof Error ? error.message : "Failed to load picks.",
