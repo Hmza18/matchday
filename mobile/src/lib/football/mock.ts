@@ -90,7 +90,7 @@ export function mockFixtures(now = Date.now()): PickFixture[] {
       def: seed.def,
       dist: seed.dist,
       round: "Gameweek 7",
-      status: locked ? "in" : "pre",
+      status: locked ? "in" : "NS",
     };
   });
 }

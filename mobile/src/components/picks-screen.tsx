@@ -5,12 +5,13 @@ import { ClubBadge } from "@/src/components/ui";
 import { formatCountdown } from "@/src/lib/data";
 import { loadLiveCentre } from "@/src/lib/football/live";
 import { pickPoints, scorePick } from "@/src/lib/football/map";
+import { isPickOpen, secondsUntilKickoff } from "@/src/lib/football/pick-lock";
 import type { LiveMatch } from "@/src/lib/football/types";
 import { useMatchday } from "@/src/lib/store";
 import { colors, fonts } from "@/src/theme";
 
 export function PicksScreen() {
-  const { loading, fixtures, fixturesError, pickFor, bump, pop, saved, pickSaveError, picks } = useMatchday();
+  const { loading, fixtures, fixturesError, pickFor, bump, pop, saved, pickSaveError, picks, now } = useMatchday();
   const [finished, setFinished] = useState<LiveMatch[]>([]);
 
   useEffect(() => {
@@ -35,7 +36,8 @@ export function PicksScreen() {
     }
     return { total, scored };
   }, [fixtures, finished, picks]);
-  const openCount = fixtures.filter((f) => !f.locked && f.lockSeconds >= 0).length;
+  const nowMs = now * 1000;
+  const openCount = fixtures.filter((fixture) => isPickOpen(fixture, nowMs)).length;
 
   if (loading) {
     return (
@@ -79,8 +81,8 @@ export function PicksScreen() {
       ) : null}
 
       {fixtures.map((fixture) => {
-        const left = fixture.lockSeconds;
-        const locked = fixture.locked || left < 0;
+        const left = secondsUntilKickoff(fixture.kickoffIso, nowMs);
+        const locked = !isPickOpen(fixture, nowMs);
         const crit = !locked && left < 900;
         const warn = !locked && left < 7200 && !crit;
         const pick = pickFor(fixture.id, fixture.def);

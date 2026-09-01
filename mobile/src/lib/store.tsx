@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useAuth } from "@/src/lib/auth";
 import { loadFixturesForGw } from "@/src/lib/football/fixtures";
+import { isPickOpen } from "@/src/lib/football/pick-lock";
 import { loadSeasonResults, type FinishedResult } from "@/src/lib/football/results";
 import {
   createLeagueRemote,
@@ -154,6 +155,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const savePickRemote = useCallback(
     async (fixtureId: string, homeScore: number, awayScore: number, gameweek: number) => {
       if (!user) return;
+      const fixture = fixturesRef.current.find((item) => item.id === fixtureId);
+      if (fixture && !isPickOpen(fixture)) {
+        throw new Error("Picks are locked for this fixture.");
+      }
       const { error } = await supabase.from("picks").upsert(
         {
           user_id: user.id,
@@ -423,9 +428,9 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
   const bump = useCallback(
     (id: string, side: 0 | 1, delta: number, locked: boolean) => {
-      if (locked) return;
       const fixture = fixturesRef.current.find((item) => item.id === id);
       if (!fixture) return;
+      if (locked || !isPickOpen(fixture)) return;
       const current = (picks[id] ?? fixture.def).slice() as [number, number];
       const next = Math.max(0, Math.min(9, current[side] + delta));
       if (next === current[side]) return;
