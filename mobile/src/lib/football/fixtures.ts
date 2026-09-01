@@ -23,13 +23,9 @@ function mockPayload(requestedGw?: number) {
 export async function loadFixturesForGw(requestedGw?: number) {
   if (MOCK_MODE) return mockPayload(requestedGw);
 
-  let payload;
-  try {
-    payload = await fetchAllFixtures();
-  } catch (error) {
-    console.warn(`[api] fixtures unavailable, serving bundled data: ${String(error)}`);
-    return mockPayload(requestedGw);
-  }
+  // Network failures must surface as errors. Falling back to bundled demo
+  // clubs would let signed-in users upsert fake `mock-*` ids into `picks`.
+  const payload = await fetchAllFixtures();
 
   const weeks = buildGameweeks(payload.league.calendar);
   const now = Date.now();

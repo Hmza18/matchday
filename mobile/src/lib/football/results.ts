@@ -17,12 +17,7 @@ export type FinishedResult = {
 
 export async function loadSeasonResults() {
   if (MOCK_MODE) return mockSeasonResults();
-  try {
-    return await fetchSeasonResults();
-  } catch (error) {
-    console.warn(`[api] results unavailable, serving bundled data: ${String(error)}`);
-    return mockSeasonResults();
-  }
+  return fetchSeasonResults();
 }
 
 async function fetchSeasonResults() {
