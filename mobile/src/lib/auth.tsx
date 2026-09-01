@@ -12,6 +12,7 @@ import {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User } from "@supabase/supabase-js";
+import { picksCacheKeysToClearOnSignOut } from "@/src/lib/picks-cache";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -233,6 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(mapAuthError(error.message));
+    await AsyncStorage.multiRemove(picksCacheKeysToClearOnSignOut());
     setUser(null);
   }, [supabase]);
 

@@ -23,6 +23,11 @@ import {
   mapIncomingMessage,
   computePlayerStats,
 } from "@/src/lib/leagues";
+import {
+  LEGACY_PICKS_CACHE_KEY,
+  picksCacheKey,
+  picksCacheReadKeys,
+} from "@/src/lib/picks-cache";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 import type { PickFixture } from "@/src/lib/football/types";
 import type {
@@ -34,8 +39,6 @@ import type {
   TabId,
 } from "@/src/lib/types";
 import { assertNever } from "@/src/lib/types";
-
-const STORAGE_KEY = "matchday-state";
 
 type MatchdayContextValue = {
   gw: number;
@@ -108,6 +111,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const resultsRef = useRef<FinishedResult[]>([]);
   const chatChannel = useRef<RealtimeChannel | null>(null);
   const ensuringLeague = useRef(false);
+  // Capture on first render: AuthGate only mounts this provider after auth
+  // has settled, so the key matches the session we should hydrate. Do not
+  // re-read when a guest signs in — in-memory picks must survive for upload.
+  const cacheReadKeys = useRef(picksCacheReadKeys(user?.id ?? null));
 
   useEffect(() => {
     gwRef.current = gw;
@@ -279,8 +286,14 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
+    const keys = cacheReadKeys.current;
+    void (async () => {
+      try {
+        let raw: string | null = null;
+        for (const key of keys) {
+          raw = await AsyncStorage.getItem(key);
+          if (raw) break;
+        }
         if (cancelled || !raw) return;
         try {
           const persisted = JSON.parse(raw) as PersistedState;
@@ -291,10 +304,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         } catch {
           // ignore corrupt cache
         }
-      })
-      .finally(() => {
-        hydrated.current = true;
-      });
+      } finally {
+        if (!cancelled) hydrated.current = true;
+      }
+    })();
     void loadFixtures();
     const tick = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
     return () => {
@@ -310,18 +323,23 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   }, [user, loadPicks, loadLeagues]);
 
   useEffect(() => {
+    if (!user?.id) return;
+    void AsyncStorage.removeItem(LEGACY_PICKS_CACHE_KEY);
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!hydrated.current) return;
     // Autosave locally on every change so a pick survives a force-quit,
     // a dropped connection, or being made before sign-in.
     AsyncStorage.setItem(
-      STORAGE_KEY,
+      picksCacheKey(user?.id ?? null),
       JSON.stringify({
         picks,
         activeLeagueId: activeLeague?.id ?? undefined,
         premiumUnlocked,
       } satisfies PersistedState),
     );
-  }, [picks, activeLeague, premiumUnlocked]);
+  }, [picks, activeLeague, premiumUnlocked, user?.id]);
 
   useEffect(() => {
     void loadBoardAndChat(activeLeague);
