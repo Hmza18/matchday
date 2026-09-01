@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { InsightsScreen } from "@/components/insights-screen";
 import { LiveScreen } from "@/components/live-screen";
 import { PicksScreen } from "@/components/picks-screen";
+import { NewsScreen } from "@/components/news-screen";
 import { PoolsScreen } from "@/components/pools-screen";
 import { ChevronLeft, ChevronRight, IconPath, RefreshIcon } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
@@ -16,6 +17,7 @@ const TABS: { id: TabId; label: string; premium?: boolean }[] = [
   { id: "picks", label: "Picks" },
   { id: "live", label: "Live" },
   { id: "pools", label: "Pools" },
+  { id: "news", label: "News" },
   { id: "insights", label: "Insights", premium: true },
 ];
 
@@ -27,10 +29,10 @@ export function AppHeader() {
 
   return (
     <header
-      className="sticky top-0 z-20 px-4 pt-[58px] pb-[13px] text-[#f8f8f8] shadow-[0_1px_0_rgba(20,108,67,.4)]"
+      className="sticky top-0 z-20 px-4 pt-[58px] pb-[13px] text-[#f8f8f8] shadow-[0_8px_24px_rgba(15,23,42,.14)] backdrop-blur-md"
       style={{
         backgroundImage:
-          "repeating-linear-gradient(90deg,rgba(248,248,248,.055) 0 26px,rgba(248,248,248,0) 26px 52px),linear-gradient(150deg,#198754,#146C43)",
+          "repeating-linear-gradient(90deg,rgba(248,248,248,.06) 0 26px,rgba(248,248,248,0) 26px 52px),linear-gradient(155deg,#1a9d61 0%,#198754 42%,#0f5c38 100%)",
       }}
     >
       <div className="mx-auto flex min-h-[34px] max-w-[760px] items-center gap-3">
@@ -97,7 +99,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="sticky bottom-0 z-30 flex border-t border-md-line bg-md-paper px-1 pt-1.5 pb-[26px] lg:hidden"
+      className="sticky bottom-0 z-30 flex border-t border-md-line/80 bg-md-paper/95 px-0.5 pt-1.5 pb-[26px] shadow-[0_-8px_24px_rgba(15,23,42,.06)] backdrop-blur-md lg:hidden"
     >
       {TABS.map((item) => {
         const on = tab === item.id;
@@ -121,7 +123,7 @@ export function BottomNav() {
                 </span>
               ) : null}
             </span>
-            <span className="text-[10.5px] font-semibold tracking-[0.01em]">{item.label}</span>
+            <span className="text-[10px] font-semibold tracking-[0.01em]">{item.label}</span>
             <span
               className="absolute top-0 h-[3px] rounded-full bg-md-green transition-[width] duration-200"
               style={{ width: on ? 22 : 0 }}
@@ -262,6 +264,8 @@ export function ScreenSwitch() {
       return <LiveScreen />;
     case "pools":
       return <PoolsScreen />;
+    case "news":
+      return <NewsScreen />;
     case "insights":
       return <InsightsScreen />;
     default:

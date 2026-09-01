@@ -1,4 +1,4 @@
-export type TabId = "picks" | "live" | "pools" | "insights";
+export type TabId = "picks" | "live" | "pools" | "news" | "insights";
 
 export type PillKind = "exact" | "close" | "result" | "miss";
 

@@ -13,6 +13,7 @@ const TAB_META: Record<
   index: { label: "Picks", icon: TAB_ICONS.picks },
   live: { label: "Live", icon: TAB_ICONS.live, live: true },
   pools: { label: "Pools", icon: TAB_ICONS.pools },
+  news: { label: "News", icon: TAB_ICONS.news },
   insights: { label: "Insights", icon: TAB_ICONS.insights, pro: true },
   settings: { label: "You", icon: TAB_ICONS.settings },
 };
@@ -70,6 +71,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: "Picks" }} />
       <Tabs.Screen name="live" options={{ title: "Live" }} />
       <Tabs.Screen name="pools" options={{ title: "Pools" }} />
+      <Tabs.Screen name="news" options={{ title: "News" }} />
       <Tabs.Screen name="insights" options={{ title: "Insights" }} />
       <Tabs.Screen name="settings" options={{ title: "You" }} />
     </Tabs>
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fonts.sansSemi,
-    fontSize: 10,
+    fontSize: 9.5,
   },
   liveDot: {
     position: "absolute",

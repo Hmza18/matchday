@@ -1,17 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --md-canvas: #e8eeeb;
-  --md-page: #f5faf8;
-  --md-paper: #f8f8f8;
+  --md-canvas: #dfe8e3;
+  --md-page: #f3f8f6;
+  --md-paper: #ffffff;
   --md-ink: #1f2937;
-  --md-muted: #6b7280;
-  --md-line: #e5e7eb;
+  --md-ink-deep: #0f172a;
+  --md-muted: #64748b;
+  --md-line: #e2e8f0;
   --md-green: #198754;
   --md-green-deep: #146c43;
   --md-mint: #d1fae5;
-  --md-mint-soft: #eef2f1;
+  --md-mint-soft: #ecfdf5;
   --md-danger: #dc2626;
+  --md-gold: #c9a227;
+  --md-gold-soft: #f8f1df;
+  --md-shadow-soft: 0 2px 8px rgba(15, 23, 42, 0.05);
+  --md-shadow-card: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --md-shadow-premium: 0 16px 40px rgba(20, 108, 67, 0.14);
 }
 
 @theme inline {
@@ -19,6 +25,7 @@
   --color-md-page: var(--md-page);
   --color-md-paper: var(--md-paper);
   --color-md-ink: var(--md-ink);
+  --color-md-ink-deep: var(--md-ink-deep);
   --color-md-muted: var(--md-muted);
   --color-md-line: var(--md-line);
   --color-md-green: var(--md-green);
@@ -26,6 +33,8 @@
   --color-md-mint: var(--md-mint);
   --color-md-mint-soft: var(--md-mint-soft);
   --color-md-danger: var(--md-danger);
+  --color-md-gold: var(--md-gold);
+  --color-md-gold-soft: var(--md-gold-soft);
   --font-sans: var(--font-inter);
   --font-headline: var(--font-oswald);
 }
@@ -39,6 +48,9 @@ body {
 body {
   background: var(--md-canvas);
   color: var(--md-ink);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(25, 135, 84, 0.1), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 100%, rgba(201, 162, 39, 0.06), transparent 50%);
 }
 
 button,
@@ -117,6 +129,25 @@ a:hover {
 
 .md-fade {
   animation: md-fade 0.18s ease-out;
+}
+
+.md-card-premium {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--md-line) 88%, var(--md-green) 12%);
+  background: var(--md-paper);
+  box-shadow: var(--md-shadow-soft);
+}
+
+.md-featured-card {
+  border-color: color-mix(in srgb, var(--md-gold) 28%, var(--md-line) 72%);
+  box-shadow: var(--md-shadow-card);
+}
+
+.md-premium-banner {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--md-gold) 35%, var(--md-line) 65%);
+  background: linear-gradient(135deg, var(--md-gold-soft) 0%, var(--md-paper) 58%, var(--md-mint-soft) 100%);
+  box-shadow: var(--md-shadow-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {

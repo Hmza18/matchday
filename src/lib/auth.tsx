@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import type { User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export type AuthUser = {
   id: string;
@@ -71,13 +71,13 @@ function mapUser(user: User, profile?: { full_name: string; initials: string } |
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => (isSupabaseConfigured() ? createClient() : null), []);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const hydrateUser = useCallback(
     async (authUser: User | null) => {
-      if (!authUser) {
+      if (!authUser || !supabase) {
         setUser(null);
         return;
       }
@@ -94,6 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
 
     supabase.auth.getUser().then(({ data }) => {
@@ -117,6 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
+      if (!supabase) {
+        throw new Error(
+          "Supabase is not configured. Add your project URL and anon key to .env.local.",
+        );
+      }
       const normalized = email.trim().toLowerCase();
       if (!normalized || !password) {
         throw new Error("Enter your email and password.");
@@ -134,6 +144,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (name: string, email: string, password: string) => {
+      if (!supabase) {
+        throw new Error(
+          "Supabase is not configured. Add your project URL and anon key to .env.local.",
+        );
+      }
       const trimmedName = name.trim();
       const normalized = email.trim().toLowerCase();
 
@@ -168,6 +183,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signInWithApple = useCallback(async () => {
+    if (!supabase) {
+      throw new Error(
+        "Supabase is not configured. Add your project URL and anon key to .env.local.",
+      );
+    }
     const origin = window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "apple",
@@ -181,6 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const signOut = useCallback(async () => {
+    if (!supabase) {
+      setUser(null);
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(mapAuthError(error.message));
     setUser(null);

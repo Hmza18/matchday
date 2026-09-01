@@ -71,22 +71,22 @@ export function AuthShell({ mode }: { mode: Mode }) {
     <div className="relative flex min-h-dvh justify-center overflow-hidden bg-md-canvas px-4 py-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-90"
+        className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(25,135,84,.22), transparent 55%),radial-gradient(ellipse 60% 40% at 100% 100%, rgba(20,108,67,.12), transparent 50%)",
+            "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(25,135,84,.24), transparent 55%),radial-gradient(ellipse 55% 45% at 100% 100%, rgba(201,162,39,.12), transparent 50%),radial-gradient(ellipse 40% 35% at 0% 80%, rgba(20,108,67,.1), transparent 45%)",
         }}
       />
 
       <div className="relative z-10 flex w-full max-w-[400px] flex-col justify-center">
         <div className="mb-8 flex flex-col items-center text-center">
           <div
-            className="grid size-14 place-items-center rounded-[16px] font-headline text-[28px] font-bold text-[#f8f8f8] shadow-[0_12px_28px_rgba(20,108,67,.28)]"
-            style={{ background: "linear-gradient(160deg,#198754,#146C43)" }}
+            className="grid size-14 place-items-center rounded-[18px] font-headline text-[28px] font-bold text-[#f8f8f8] shadow-[0_16px_36px_rgba(20,108,67,.32)] ring-1 ring-white/20"
+            style={{ background: "linear-gradient(160deg,#1a9d61,#146C43)" }}
           >
             M
           </div>
-          <h1 className="mt-4 font-headline text-[34px] font-semibold tracking-[0.04em] text-md-ink">
+          <h1 className="mt-4 font-headline text-[34px] font-semibold tracking-[0.06em] text-md-ink-deep">
             MATCHDAY
           </h1>
           <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-md-muted">
@@ -96,7 +96,7 @@ export function AuthShell({ mode }: { mode: Mode }) {
           </p>
         </div>
 
-        <div className="rounded-[20px] border border-md-line bg-md-paper p-5 shadow-[0_18px_40px_rgba(31,41,55,.08)]">
+        <div className="rounded-[22px] border border-md-line/80 bg-md-paper/95 p-5 shadow-[0_22px_50px_rgba(15,23,42,.1)] backdrop-blur-sm">
           <h2 className="font-headline text-[22px] font-semibold tracking-[0.02em]">
             {isSignUp ? "Create account" : "Welcome back"}
           </h2>
@@ -198,7 +198,7 @@ export function AuthShell({ mode }: { mode: Mode }) {
             <button
               type="submit"
               disabled={submitting || appleLoading}
-              className="h-11 w-full rounded-full bg-md-green text-sm font-semibold text-[#f8f8f8] transition hover:bg-md-green-deep disabled:opacity-60"
+              className="h-11 w-full rounded-full bg-md-green text-sm font-semibold text-[#f8f8f8] shadow-[0_8px_20px_rgba(20,108,67,.25)] transition hover:bg-md-green-deep disabled:opacity-60"
             >
               {submitting
                 ? isSignUp

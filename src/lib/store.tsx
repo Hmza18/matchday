@@ -459,6 +459,8 @@ export function screenCopy(tab: TabId, gw: number): [string, string] {
       return ["Premier League", "Live centre"];
     case "pools":
       return ["4 leagues", "Pools"];
+    case "news":
+      return ["Sports Illustrated", "News"];
     case "insights":
       return ["Model & form data", "Insights"];
     default: {

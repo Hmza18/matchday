@@ -584,6 +584,8 @@ export function screenCopy(tab: TabId, gw: number, leagueCount = 0): [string, st
       return ["Premier League", "Live centre"];
     case "pools":
       return [leagueCount === 1 ? "1 league" : `${leagueCount} leagues`, "Pools"];
+    case "news":
+      return ["Sports Illustrated", "News"];
     case "insights":
       return ["Model & form data", "Insights"];
     case "settings":

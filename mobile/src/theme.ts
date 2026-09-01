@@ -39,6 +39,10 @@ export const colors = {
   warnInk: "#92400E",
   warnDeep: "#B45309",
 
+  // Premium accent
+  gold: "#C9A227",
+  goldSoft: "#F8F1DF",
+
   // Neutrals used by charts and disabled states
   grey: "#9CA3AF",
   greyLight: "#C7CDD4",

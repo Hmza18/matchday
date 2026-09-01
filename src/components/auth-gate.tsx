@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 const PUBLIC_PATHS = new Set(["/sign-in", "/sign-up"]);
 
@@ -11,9 +12,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isPublic = PUBLIC_PATHS.has(pathname);
+  const demoMode = !isSupabaseConfigured();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || demoMode) return;
     if (!user && !isPublic) {
       router.replace("/sign-in");
       return;
@@ -21,9 +23,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
     if (user && isPublic) {
       router.replace("/");
     }
-  }, [user, loading, isPublic, router]);
+  }, [user, loading, isPublic, router, demoMode]);
 
-  if (loading) {
+  if (loading && !demoMode) {
     return (
       <div className="grid min-h-dvh place-items-center bg-md-canvas">
         <div className="flex flex-col items-center gap-3">
@@ -39,7 +41,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if ((!user && !isPublic) || (user && isPublic)) {
+  if (!demoMode && ((!user && !isPublic) || (user && isPublic))) {
     return (
       <div className="grid min-h-dvh place-items-center bg-md-canvas">
         <p className="text-sm text-md-muted">Redirecting…</p>
