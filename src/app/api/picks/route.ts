@@ -137,17 +137,41 @@ export async function POST(request: Request) {
     }
 
     const resolvedGameweek = gameweekFromFixture(fixture, gameweek);
+    const kickoffAt = new Date(fixture.kickoffIso);
+    if (Number.isNaN(kickoffAt.getTime())) {
+      return NextResponse.json(
+        { error: "Fixture kickoff is invalid." },
+        { status: 500 },
+      );
+    }
 
-    const { error } = await supabase.from("picks").upsert(
-      {
-        user_id: user.id,
-        fixture_id: fixtureId,
-        home_score: homeScore,
-        away_score: awayScore,
-        gameweek: resolvedGameweek,
-      },
-      { onConflict: "user_id,fixture_id" },
-    );
+    const pickRow = {
+      user_id: user.id,
+      fixture_id: fixtureId,
+      home_score: homeScore,
+      away_score: awayScore,
+      gameweek: resolvedGameweek,
+      kickoff_at: kickoffAt.toISOString(),
+    };
+
+    let { error } = await supabase
+      .from("picks")
+      .upsert(pickRow, { onConflict: "user_id,fixture_id" });
+
+    // Column is added by the hide-until-kickoff migration; keep saving if
+    // this environment has not applied it yet.
+    if (error && /kickoff_at/i.test(error.message)) {
+      ({ error } = await supabase.from("picks").upsert(
+        {
+          user_id: pickRow.user_id,
+          fixture_id: pickRow.fixture_id,
+          home_score: pickRow.home_score,
+          away_score: pickRow.away_score,
+          gameweek: pickRow.gameweek,
+        },
+        { onConflict: "user_id,fixture_id" },
+      ));
+    }
 
     if (error) {
       throw new Error(error.message);

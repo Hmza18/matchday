@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pickPoints, scorePick } from "@/src/lib/football/map";
 import type { FinishedResult } from "@/src/lib/football/results";
+import {
+  isFellowPickReadable,
+  pickFixtureIdsForBoard,
+} from "@/src/lib/picks-privacy";
 import type { BoardRow, ChatMessage, League, PlayerStats } from "@/src/lib/types";
 
 type LeagueRow = {
@@ -89,6 +93,45 @@ export async function joinGlobalLeagueRemote(supabase: SupabaseClient) {
   return mapLeague(row as LeagueRow);
 }
 
+type FellowPickRow = {
+  user_id: string;
+  fixture_id: string;
+  home_score: number;
+  away_score: number;
+  kickoff_at?: string | null;
+};
+
+async function loadFellowPicks(
+  supabase: SupabaseClient,
+  memberIds: string[],
+  finishedIds: string[],
+): Promise<FellowPickRow[]> {
+  if (finishedIds.length === 0) return [];
+
+  const withKickoff = await supabase
+    .from("picks")
+    .select("user_id, fixture_id, home_score, away_score, kickoff_at")
+    .in("user_id", memberIds)
+    .in("fixture_id", finishedIds);
+
+  if (!withKickoff.error) {
+    return (withKickoff.data ?? []) as FellowPickRow[];
+  }
+
+  if (!/kickoff_at/i.test(withKickoff.error.message)) {
+    throw new Error(withKickoff.error.message);
+  }
+
+  const legacy = await supabase
+    .from("picks")
+    .select("user_id, fixture_id, home_score, away_score")
+    .in("user_id", memberIds)
+    .in("fixture_id", finishedIds);
+
+  if (legacy.error) throw new Error(legacy.error.message);
+  return (legacy.data ?? []) as FellowPickRow[];
+}
+
 export async function fetchLeagueBoard(
   supabase: SupabaseClient,
   league: League,
@@ -106,28 +149,28 @@ export async function fetchLeagueBoard(
   const memberIds = [...new Set((members ?? []).map((row) => row.user_id as string))];
   if (memberIds.length === 0) return [];
 
-  const [{ data: profiles, error: profileError }, { data: pickRows, error: pickError }] =
-    await Promise.all([
-      supabase.from("profiles").select("id, full_name, initials, avatar_url").in("id", memberIds),
-      supabase
-        .from("picks")
-        .select("user_id, fixture_id, home_score, away_score")
-        .in("user_id", memberIds),
-    ]);
+  const finishedIds = pickFixtureIdsForBoard(results);
+  const [{ data: profiles, error: profileError }, pickRows] = await Promise.all([
+    supabase.from("profiles").select("id, full_name, initials, avatar_url").in("id", memberIds),
+    loadFellowPicks(supabase, memberIds, finishedIds),
+  ]);
 
   if (profileError) throw new Error(profileError.message);
-  if (pickError) throw new Error(pickError.message);
 
   const profileMap = new Map<string, ProfileRow>();
   for (const profile of (profiles ?? []) as ProfileRow[]) {
     profileMap.set(profile.id, profile);
   }
 
+  const now = Date.now();
   const picksByUser = new Map<string, Record<string, [number, number]>>();
-  for (const row of pickRows ?? []) {
-    const userId = row.user_id as string;
+  for (const row of pickRows) {
+    if (row.kickoff_at && !isFellowPickReadable(row.kickoff_at, now)) {
+      continue;
+    }
+    const userId = row.user_id;
     const current = picksByUser.get(userId) ?? {};
-    current[row.fixture_id as string] = [row.home_score as number, row.away_score as number];
+    current[row.fixture_id] = [row.home_score, row.away_score];
     picksByUser.set(userId, current);
   }
 
