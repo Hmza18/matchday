@@ -74,16 +74,41 @@ export async function wc26Fetch<T>(
   }
 }
 
+/**
+ * The fixtures endpoint reports a full-season `count` (380 PL matches) but
+ * ignores `pageSize`/`pageIndex`. It paginates with `limit` (capped at 200)
+ * and 1-based `page`. A single first-page fetch left later gameweeks empty.
+ */
+const FIXTURES_PAGE_LIMIT = 200;
+const FIXTURES_MAX_PAGES = 8;
+
 export async function fetchAllFixtures(): Promise<Wc26FixturesResponse> {
-  const payload = await wc26Fetch<Wc26FixturesResponse>(
-    `/get/soccer/${PL_LEAGUE_SLUG}/fixtures`,
-    { status: "all", pageIndex: 1, pageSize: 100 },
-  );
+  const eventsById = new Map<string, Wc26FixturesResponse["events"][number]>();
+  let first: Wc26FixturesResponse | undefined;
 
-  const events = uniqueById(payload.events);
+  for (let page = 1; page <= FIXTURES_MAX_PAGES; page += 1) {
+    const payload = await wc26Fetch<Wc26FixturesResponse>(
+      `/get/soccer/${PL_LEAGUE_SLUG}/fixtures`,
+      { status: "all", limit: FIXTURES_PAGE_LIMIT, page },
+    );
+    first ??= payload;
+    const before = eventsById.size;
+    for (const event of payload.events ?? []) {
+      eventsById.set(event.id, event);
+    }
+    const total = typeof payload.count === "number" ? payload.count : eventsById.size;
+    if (eventsById.size >= total || eventsById.size === before) {
+      break;
+    }
+  }
 
+  if (!first) {
+    throw new Error("Football API returned no fixture pages.");
+  }
+
+  const events = [...eventsById.values()];
   return {
-    ...payload,
+    ...first,
     events,
     count: events.length,
     pageIndex: 1,

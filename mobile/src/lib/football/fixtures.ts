@@ -48,14 +48,10 @@ export async function loadFixturesForGw(requestedGw?: number) {
   const activeGw =
     requestedGw && requestedGw > 0 ? requestedGw : currentGameweek(weeks);
 
-  let fixtures = mapped.filter((fixture) => {
+  const fixtures = mapped.filter((fixture) => {
     const gw = gameweekForDate(fixture.kickoffIso, weeks);
     return gw === activeGw;
   });
-
-  if (fixtures.length === 0) {
-    fixtures = mapped.slice(0, 10);
-  }
 
   return {
     season: payload.league.season.year,

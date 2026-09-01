@@ -34,16 +34,12 @@ export async function GET(request: Request) {
     const activeGw =
       requestedGw > 0 ? requestedGw : currentGameweek(weeks);
 
-    let fixtures = mapped.filter((fixture) => {
-      const gw = gameweekForDate(fixture.kickoffIso, weeks);
-      return gw === activeGw;
-    });
-
-    if (fixtures.length === 0) {
-      fixtures = mapped.slice(0, 10);
-    }
-
-    fixtures = uniqueById(fixtures);
+    const fixtures = uniqueById(
+      mapped.filter((fixture) => {
+        const gw = gameweekForDate(fixture.kickoffIso, weeks);
+        return gw === activeGw;
+      }),
+    );
 
     return NextResponse.json(
       {
