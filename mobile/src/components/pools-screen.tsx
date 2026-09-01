@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { ChatIcon, SendIcon, TrophyIcon } from "@/src/components/icons";
 import { PlayerAvatar } from "@/src/components/ui";
@@ -19,7 +21,14 @@ export function PoolsScreen() {
     draft,
     setDraft,
     send,
+    reloadBoard,
   } = useMatchday();
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadBoard();
+    }, [reloadBoard]),
+  );
 
   const empty = leagues.length === 0 || !activeLeague;
 

@@ -41,6 +41,7 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
+    "test": "node --experimental-strip-types --test --test-reporter=spec src/lib/football/results-cache.test.ts",
     "start": "expo start --tunnel",
     "android": "expo start --android",
     "ios": "expo start --ios",

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,9 +20,15 @@ import { colors, fonts } from "@/src/theme";
 export function SettingsScreen() {
   const router = useRouter();
   const { user, signOut, updateAvatar } = useAuth();
-  const { leagues, gw, playerStats, setActiveLeagueId, setJoinOpen, board } = useMatchday();
+  const { leagues, gw, playerStats, setActiveLeagueId, setJoinOpen, board, reloadBoard } = useMatchday();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadBoard();
+    }, [reloadBoard]),
+  );
 
   if (!user) {
     return (
