@@ -15,6 +15,11 @@ export type FinishedResult = {
   gameweek: number;
 };
 
+export {
+  SEASON_RESULTS_MAX_AGE_MS,
+  isSeasonResultsCacheFresh,
+} from "@/src/lib/football/results-cache";
+
 export async function loadSeasonResults() {
   if (MOCK_MODE) return mockSeasonResults();
   try {

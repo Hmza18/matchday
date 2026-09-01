@@ -10,9 +10,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { AppState } from "react-native";
 import { useAuth } from "@/src/lib/auth";
 import { loadFixturesForGw } from "@/src/lib/football/fixtures";
-import { loadSeasonResults, type FinishedResult } from "@/src/lib/football/results";
+import {
+  isSeasonResultsCacheFresh,
+  loadSeasonResults,
+  type FinishedResult,
+} from "@/src/lib/football/results";
 import {
   createLeagueRemote,
   fetchLeagueBoard,
@@ -69,6 +74,7 @@ type MatchdayContextValue = {
   playerStats: PlayerStats;
   premiumUnlocked: boolean;
   unlockPremium: () => void;
+  reloadBoard: () => void;
 };
 
 const MatchdayContext = createContext<MatchdayContextValue | null>(null);
@@ -106,6 +112,8 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const legacyPicksRef = useRef<Record<string, [number, number]>>({});
   const persistedLeagueId = useRef<string | null>(null);
   const resultsRef = useRef<FinishedResult[]>([]);
+  const resultsFetchedAt = useRef<number | null>(null);
+  const activeLeagueRef = useRef<League | null>(null);
   const chatChannel = useRef<RealtimeChannel | null>(null);
   const ensuringLeague = useRef(false);
 
@@ -117,6 +125,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
     () => leagues.find((league) => league.id === activeLeagueId) ?? leagues[0] ?? null,
     [leagues, activeLeagueId],
   );
+
+  useEffect(() => {
+    activeLeagueRef.current = activeLeague;
+  }, [activeLeague]);
 
   const loadFixtures = useCallback(async (roundGw?: number) => {
     setLoading(true);
@@ -256,9 +268,10 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
       setBoardLoading(true);
       try {
-        if (resultsRef.current.length === 0) {
+        if (!isSeasonResultsCacheFresh(resultsFetchedAt.current)) {
           const season = await loadSeasonResults();
           resultsRef.current = season.results;
+          resultsFetchedAt.current = Date.now();
           setSeasonResults(season.results);
         }
         const [nextBoard, nextMessages] = await Promise.all([
@@ -375,11 +388,26 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(() => {
     resultsRef.current = [];
+    resultsFetchedAt.current = null;
     setSeasonResults([]);
     void loadFixtures(gw);
     void loadPicks();
     void loadLeagues();
   }, [gw, loadFixtures, loadPicks, loadLeagues]);
+
+  const reloadBoard = useCallback(() => {
+    resultsFetchedAt.current = null;
+    void loadBoardAndChat(activeLeagueRef.current);
+  }, [loadBoardAndChat]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      resultsFetchedAt.current = null;
+      void loadBoardAndChat(activeLeagueRef.current);
+    });
+    return () => sub.remove();
+  }, [loadBoardAndChat]);
 
   const prevGw = useCallback(() => {
     const next = Math.max(1, gw - 1);
@@ -534,6 +562,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       playerStats,
       premiumUnlocked,
       unlockPremium: () => setPremiumUnlocked(true),
+      reloadBoard,
     }),
     [
       gw,
@@ -563,7 +592,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       messages,
       playerStats,
       premiumUnlocked,
-      premiumUnlocked,
+      reloadBoard,
     ],
   );
 
