@@ -25,15 +25,16 @@ import {
 } from "@/src/lib/leagues";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 import type { PickFixture } from "@/src/lib/football/types";
-import type {
-  BoardRow,
-  ChatMessage,
-  League,
-  PersistedState,
-  PlayerStats,
-  TabId,
+import { shouldSyncAccountData } from "@/src/lib/account-sync";
+import {
+  assertNever,
+  type BoardRow,
+  type ChatMessage,
+  type League,
+  type PersistedState,
+  type PlayerStats,
+  type TabId,
 } from "@/src/lib/types";
-import { assertNever } from "@/src/lib/types";
 
 const STORAGE_KEY = "matchday-state";
 
@@ -95,7 +96,11 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [seasonResults, setSeasonResults] = useState<FinishedResult[]>([]);
   const [premiumUnlocked, setPremiumUnlocked] = useState(false);
-  const hydrated = useRef(false);
+  // Must be state, not a ref: AuthGate mounts this provider only after auth
+  // has resolved, so `user` is already set on the first render. A ref flipped
+  // in AsyncStorage's finally() would not retrigger the picks/leagues effect,
+  // and signed-in users would never load remote data (empty Pools, stale picks).
+  const [cacheReady, setCacheReady] = useState(false);
   const migrated = useRef(false);
   const popTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -293,7 +298,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         }
       })
       .finally(() => {
-        hydrated.current = true;
+        if (!cancelled) setCacheReady(true);
       });
     void loadFixtures();
     const tick = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
@@ -304,13 +309,13 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   }, [loadFixtures]);
 
   useEffect(() => {
-    if (!hydrated.current || !user) return;
+    if (!shouldSyncAccountData(cacheReady, Boolean(user))) return;
     void loadPicks();
     void loadLeagues();
-  }, [user, loadPicks, loadLeagues]);
+  }, [cacheReady, user, loadPicks, loadLeagues]);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!cacheReady) return;
     // Autosave locally on every change so a pick survives a force-quit,
     // a dropped connection, or being made before sign-in.
     AsyncStorage.setItem(
@@ -321,7 +326,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         premiumUnlocked,
       } satisfies PersistedState),
     );
-  }, [picks, activeLeague, premiumUnlocked]);
+  }, [cacheReady, picks, activeLeague, premiumUnlocked]);
 
   useEffect(() => {
     void loadBoardAndChat(activeLeague);
