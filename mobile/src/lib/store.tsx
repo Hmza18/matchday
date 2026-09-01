@@ -152,18 +152,43 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   }, [supabase, user]);
 
   const savePickRemote = useCallback(
-    async (fixtureId: string, homeScore: number, awayScore: number, gameweek: number) => {
+    async (
+      fixtureId: string,
+      homeScore: number,
+      awayScore: number,
+      gameweek: number,
+      kickoffIso?: string,
+    ) => {
       if (!user) return;
-      const { error } = await supabase.from("picks").upsert(
-        {
-          user_id: user.id,
-          fixture_id: fixtureId,
-          home_score: homeScore,
-          away_score: awayScore,
-          gameweek,
-        },
-        { onConflict: "user_id,fixture_id" },
-      );
+      const pickRow: {
+        user_id: string;
+        fixture_id: string;
+        home_score: number;
+        away_score: number;
+        gameweek: number;
+        kickoff_at?: string;
+      } = {
+        user_id: user.id,
+        fixture_id: fixtureId,
+        home_score: homeScore,
+        away_score: awayScore,
+        gameweek,
+      };
+      if (kickoffIso) {
+        const kickoffAt = new Date(kickoffIso);
+        if (!Number.isNaN(kickoffAt.getTime())) {
+          pickRow.kickoff_at = kickoffAt.toISOString();
+        }
+      }
+      let { error } = await supabase
+        .from("picks")
+        .upsert(pickRow, { onConflict: "user_id,fixture_id" });
+      if (error && pickRow.kickoff_at && /kickoff_at/i.test(error.message)) {
+        delete pickRow.kickoff_at;
+        ({ error } = await supabase
+          .from("picks")
+          .upsert(pickRow, { onConflict: "user_id,fixture_id" }));
+      }
       if (error) throw new Error(error.message);
     },
     [supabase, user],
@@ -184,8 +209,15 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         for (const fixtureId of legacyIds) {
           const scores = legacy[fixtureId];
           if (!scores) continue;
+          const fixture = fixturesRef.current.find((item) => item.id === fixtureId);
           try {
-            await savePickRemote(fixtureId, scores[0], scores[1], gwRef.current);
+            await savePickRemote(
+              fixtureId,
+              scores[0],
+              scores[1],
+              gwRef.current,
+              fixture?.kickoffIso,
+            );
           } catch {
             // skip locked fixtures during migration
           }
@@ -402,7 +434,14 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
     (fixtureId: string, scores: [number, number]) => {
       clearTimeout(saveTimers.current[fixtureId]);
       saveTimers.current[fixtureId] = setTimeout(() => {
-        void savePickRemote(fixtureId, scores[0], scores[1], gwRef.current)
+        const fixture = fixturesRef.current.find((item) => item.id === fixtureId);
+        void savePickRemote(
+          fixtureId,
+          scores[0],
+          scores[1],
+          gwRef.current,
+          fixture?.kickoffIso,
+        )
           .then(() => {
             setPickSaveError(null);
             setSaved(fixtureId);
