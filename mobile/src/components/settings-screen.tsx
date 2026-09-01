@@ -1,8 +1,11 @@
 import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,17 +15,43 @@ import {
 import { CameraIcon } from "@/src/components/icons";
 import { PlayerAvatar } from "@/src/components/ui";
 import { useAuth } from "@/src/lib/auth";
+import { PRIVACY_URL, TERMS_URL } from "@/src/lib/config";
 import { resetOnboarding } from "@/src/lib/onboarding";
 import { useMatchday } from "@/src/lib/store";
 import { formatPoints } from "@/src/lib/types";
 import { colors, fonts } from "@/src/theme";
 
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
+
 export function SettingsScreen() {
   const router = useRouter();
-  const { user, signOut, updateAvatar } = useAuth();
+  const { user, signOut, deleteAccount, updateAvatar } = useAuth();
   const { leagues, gw, playerStats, setActiveLeagueId, setJoinOpen, board } = useMatchday();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const confirmDelete = () => {
+    Alert.alert(
+      "Delete account?",
+      "This permanently removes your profile, picks, league memberships, and chat messages. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            setBusy(true);
+            void deleteAccount()
+              .then(() => router.replace("/(onboarding)/welcome"))
+              .catch((err) => {
+                setError(err instanceof Error ? err.message : "Could not delete account.");
+              })
+              .finally(() => setBusy(false));
+          },
+        },
+      ],
+    );
+  };
 
   if (!user) {
     return (
@@ -44,6 +73,15 @@ export function SettingsScreen() {
         >
           <Text style={styles.replayIntroText}>Replay intro</Text>
         </Pressable>
+        <View style={styles.legalGuest}>
+          <Pressable onPress={() => router.push("/legal/privacy")}>
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={() => router.push("/legal/terms")}>
+            <Text style={styles.legalLink}>Terms</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -162,6 +200,26 @@ export function SettingsScreen() {
         ))}
       </View>
 
+      <View style={styles.card}>
+        <Text style={styles.section}>LEGAL & SUPPORT</Text>
+        <Pressable onPress={() => router.push("/legal/privacy")} style={styles.legalRow}>
+          <Text style={styles.rowTitle}>Privacy Policy</Text>
+          <Text style={styles.chev}>›</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/legal/terms")} style={styles.legalRow}>
+          <Text style={styles.rowTitle}>Terms of Service</Text>
+          <Text style={styles.chev}>›</Text>
+        </Pressable>
+        <Pressable onPress={() => void Linking.openURL(PRIVACY_URL)} style={styles.legalRow}>
+          <Text style={styles.rowSub}>Open privacy page in browser</Text>
+          <Text style={styles.chev}>↗</Text>
+        </Pressable>
+        <Pressable onPress={() => void Linking.openURL(TERMS_URL)} style={styles.legalRow}>
+          <Text style={styles.rowSub}>Open terms page in browser</Text>
+          <Text style={styles.chev}>↗</Text>
+        </Pressable>
+      </View>
+
       <Pressable
         onPress={() => {
           void resetOnboarding().then(() => router.replace("/(onboarding)/welcome"));
@@ -174,9 +232,16 @@ export function SettingsScreen() {
       <Pressable
         onPress={() => void signOut()}
         style={styles.signOut}
+        disabled={busy}
       >
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
+
+      <Pressable onPress={confirmDelete} style={styles.deleteAccount} disabled={busy}>
+        <Text style={styles.deleteAccountText}>Delete account</Text>
+      </Pressable>
+
+      <Text style={styles.version}>Matchday v{APP_VERSION}</Text>
     </ScrollView>
   );
 }
@@ -244,6 +309,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   link: { fontFamily: fonts.sansSemi, fontSize: 12, color: colors.greenDeep },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
+  legalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
   compMark: {
     width: 40,
     height: 40,
@@ -269,6 +335,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   guestSignInText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.light },
+  legalGuest: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 16 },
+  legalLink: { fontFamily: fonts.sans, fontSize: 13, color: colors.greenDeep },
+  legalDot: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
   replayIntro: {
     height: 48,
     borderRadius: 99,
@@ -290,4 +359,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   signOutText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.danger },
+  deleteAccount: {
+    height: 48,
+    borderRadius: 99,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteAccountText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.muted },
+  version: { textAlign: "center", fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
 });

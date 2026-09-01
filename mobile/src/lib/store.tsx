@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Haptics from "expo-haptics";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   createContext,
@@ -67,8 +68,6 @@ type MatchdayContextValue = {
   send: () => void;
   messages: ChatMessage[];
   playerStats: PlayerStats;
-  premiumUnlocked: boolean;
-  unlockPremium: () => void;
 };
 
 const MatchdayContext = createContext<MatchdayContextValue | null>(null);
@@ -94,7 +93,6 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [seasonResults, setSeasonResults] = useState<FinishedResult[]>([]);
-  const [premiumUnlocked, setPremiumUnlocked] = useState(false);
   const hydrated = useRef(false);
   const migrated = useRef(false);
   const popTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -287,7 +285,6 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
           legacyPicksRef.current = persisted.picks ?? {};
           if (persisted.picks) setPicks(persisted.picks);
           persistedLeagueId.current = persisted.activeLeagueId ?? null;
-          setPremiumUnlocked(Boolean(persisted.premiumUnlocked));
         } catch {
           // ignore corrupt cache
         }
@@ -318,10 +315,9 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       JSON.stringify({
         picks,
         activeLeagueId: activeLeague?.id ?? undefined,
-        premiumUnlocked,
       } satisfies PersistedState),
     );
-  }, [picks, activeLeague, premiumUnlocked]);
+  }, [picks, activeLeague]);
 
   useEffect(() => {
     void loadBoardAndChat(activeLeague);
@@ -432,6 +428,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       current[side] = next;
       setPicks((prev) => ({ ...prev, [id]: current }));
       setPop(id + String(side));
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       clearTimeout(popTimer.current);
       popTimer.current = setTimeout(() => setPop(null), 190);
       queueSave(id, current);
@@ -532,8 +529,6 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       send,
       messages,
       playerStats,
-      premiumUnlocked,
-      unlockPremium: () => setPremiumUnlocked(true),
     }),
     [
       gw,
@@ -562,8 +557,6 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       send,
       messages,
       playerStats,
-      premiumUnlocked,
-      premiumUnlocked,
     ],
   );
 

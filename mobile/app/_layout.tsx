@@ -68,6 +68,8 @@ export default function RootLayout() {
                 <Stack.Screen name="sign-up" />
                 <Stack.Screen name="auth/callback" />
                 <Stack.Screen name="match/[eventId]" options={{ presentation: "modal" }} />
+                <Stack.Screen name="legal/privacy" />
+                <Stack.Screen name="legal/terms" />
               </Stack>
               <JoinLeagueModal />
             </MatchdayProvider>

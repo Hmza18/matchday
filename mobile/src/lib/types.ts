@@ -43,7 +43,6 @@ export type PlayerStats = {
 export type PersistedState = {
   picks?: Record<string, [number, number]>;
   activeLeagueId?: string;
-  premiumUnlocked?: boolean;
 };
 
 export function assertNever(value: never): never {

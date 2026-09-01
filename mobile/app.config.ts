@@ -11,6 +11,12 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: "com.matchday.app",
+    buildNumber: "1",
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryUsageDescription:
+        "Allow Matchday to use your photos for a profile picture.",
+    },
   },
   android: {
     adaptiveIcon: {
@@ -53,6 +59,9 @@ const config: ExpoConfig = {
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    privacyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? "https://matchday.app/privacy",
+    termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? "https://matchday.app/terms",
+    supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "support@matchday.app",
   },
 };
 

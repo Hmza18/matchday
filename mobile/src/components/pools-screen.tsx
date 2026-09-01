@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
 import { ChatIcon, SendIcon, TrophyIcon } from "@/src/components/icons";
 import { PlayerAvatar } from "@/src/components/ui";
+import { reportMessage } from "@/src/lib/reports";
 import { useMatchday } from "@/src/lib/store";
 import { formatPoints } from "@/src/lib/types";
 import { colors, fonts } from "@/src/theme";
@@ -28,6 +29,21 @@ export function PoolsScreen() {
     void Share.share({
       message: `Join my Matchday league "${activeLeague.name}" with code ${activeLeague.inviteCode}`,
     });
+  };
+
+  const reportChatMessage = (messageId: string, author: string) => {
+    Alert.alert("Report message?", `Report this message from ${author}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Report",
+        style: "destructive",
+        onPress: () => {
+          void reportMessage(messageId)
+            .then(() => Alert.alert("Reported", "Thanks — we'll review this message."))
+            .catch(() => Alert.alert("Could not report", "Try again in a moment."));
+        },
+      },
+    ]);
   };
 
   return (
@@ -139,8 +155,17 @@ export function PoolsScreen() {
               {messages.length === 0 ? (
                 <Text style={styles.emptyChat}>No messages yet. Open the banter.</Text>
               ) : (
-                messages.map((message) => (
-                  <View key={message.id} style={styles.msg}>
+                <>
+                <Text style={styles.reportHint}>Long-press a message to report it</Text>
+                {messages.map((message) => (
+                  <Pressable
+                    key={message.id}
+                    onLongPress={() => {
+                      if (!message.me) reportChatMessage(message.id, message.n);
+                    }}
+                    delayLongPress={400}
+                    style={styles.msg}
+                  >
                     <View
                       style={[
                         styles.msgAvatar,
@@ -170,8 +195,9 @@ export function PoolsScreen() {
                         <Text style={styles.bubbleText}>{message.x}</Text>
                       </View>
                     </View>
-                  </View>
-                ))
+                  </Pressable>
+                ))}
+                </>
               )}
             </View>
             <View style={styles.composer}>
@@ -336,6 +362,7 @@ const styles = StyleSheet.create({
   chatCount: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted },
   messages: { padding: 15, gap: 13 },
   emptyChat: { fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
+  reportHint: { fontFamily: fonts.sans, fontSize: 11, color: colors.muted, marginBottom: 4 },
   msg: { flexDirection: "row", gap: 9 },
   msgAvatar: { width: 26, height: 26, borderRadius: 99, alignItems: "center", justifyContent: "center" },
   msgInitials: { fontFamily: fonts.sansBold, fontSize: 10 },

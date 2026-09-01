@@ -37,6 +37,7 @@ type AuthContextValue = {
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   updateAvatar: (uri: string) => Promise<void>;
 };
 
@@ -236,6 +237,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, [supabase]);
 
+  const deleteAccount = useCallback(async () => {
+    const { error } = await supabase.rpc("delete_user_account");
+    if (error) throw new Error(mapAuthError(error.message));
+    await supabase.auth.signOut();
+    setUser(null);
+    await leaveGuest();
+  }, [supabase, leaveGuest]);
+
   const updateAvatar = useCallback(
     async (uri: string) => {
       if (!user) throw new Error("Sign in to change your photo.");
@@ -271,6 +280,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signInWithApple,
       signOut,
+      deleteAccount,
       updateAvatar,
     }),
     [
@@ -283,6 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signInWithApple,
       signOut,
+      deleteAccount,
       updateAvatar,
     ],
   );

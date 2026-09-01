@@ -34,3 +34,15 @@ export const SUPABASE_ANON_KEY = supabaseAnonKey;
  * end to end: auth is unavailable but every screen renders from local data.
  */
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+/** Hosted privacy policy URL (App Store Connect + in-app link). */
+export const PRIVACY_URL =
+  process.env.EXPO_PUBLIC_PRIVACY_URL ?? "https://matchday.app/privacy";
+
+/** Hosted terms of service URL. */
+export const TERMS_URL =
+  process.env.EXPO_PUBLIC_TERMS_URL ?? "https://matchday.app/terms";
+
+/** Support contact for account issues and UGC reports. */
+export const SUPPORT_EMAIL =
+  process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "support@matchday.app";
