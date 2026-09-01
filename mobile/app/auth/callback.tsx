@@ -2,22 +2,9 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import * as QueryParams from "expo-auth-session/build/QueryParams";
+import { createSessionFromUrl } from "@/src/lib/auth-session";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 import { colors, fonts } from "@/src/theme";
-
-async function createSessionFromUrl(url: string) {
-  const supabase = createSupabaseClient();
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-  if (errorCode) throw new Error(errorCode);
-  const { access_token, refresh_token } = params;
-  if (!access_token) return;
-  const { error } = await supabase.auth.setSession({
-    access_token,
-    refresh_token,
-  });
-  if (error) throw error;
-}
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
@@ -25,8 +12,8 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     const handleUrl = async (url: string) => {
       try {
-        await createSessionFromUrl(url);
-        router.replace("/(tabs)");
+        const established = await createSessionFromUrl(url, createSupabaseClient());
+        router.replace(established ? "/(tabs)" : "/sign-in");
       } catch {
         router.replace("/sign-in");
       }

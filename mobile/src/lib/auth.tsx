@@ -1,4 +1,3 @@
-import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -12,6 +11,7 @@ import {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User } from "@supabase/supabase-js";
+import { createSessionFromUrl } from "@/src/lib/auth-session";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -86,19 +86,6 @@ function mapUser(
   };
 }
 
-async function createSessionFromUrl(url: string) {
-  const supabase = createSupabaseClient();
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-  if (errorCode) throw new Error(errorCode);
-  const { access_token, refresh_token } = params;
-  if (!access_token) return;
-  const { error } = await supabase.auth.setSession({
-    access_token,
-    refresh_token,
-  });
-  if (error) throw error;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseClient(), []);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -152,14 +139,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      hydrateUser(session?.user ?? null);
+      void hydrateUser(session?.user ?? null).then(() => {
+        if (session?.user) void leaveGuest();
+      });
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [hydrateUser, supabase]);
+  }, [hydrateUser, leaveGuest, supabase]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -206,9 +195,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.session) {
         return "Check your email to confirm your account, then sign in.";
       }
+      await leaveGuest();
       return null;
     },
-    [supabase],
+    [supabase, leaveGuest],
   );
 
   const signInWithApple = useCallback(async () => {
@@ -225,10 +215,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!data.url) throw new Error("Could not start Apple Sign In.");
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type === "success") {
-      await createSessionFromUrl(result.url);
+    if (result.type !== "success") return;
+    const established = await createSessionFromUrl(result.url, supabase);
+    if (!established) {
+      throw new Error("Could not complete Apple Sign In.");
     }
-  }, [supabase]);
+    await leaveGuest();
+  }, [supabase, leaveGuest]);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
