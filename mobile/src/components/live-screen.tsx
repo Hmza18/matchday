@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ClubBadge, ResultPill } from "@/src/components/ui";
 import { loadLiveCentre } from "@/src/lib/football/live";
 import { scorePick } from "@/src/lib/football/map";
@@ -8,7 +9,8 @@ import { useMatchday } from "@/src/lib/store";
 import { colors, fonts } from "@/src/theme";
 
 export function LiveScreen() {
-  const { pickFor } = useMatchday();
+  const { picks } = useMatchday();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState<LiveMatch[]>([]);
@@ -59,11 +61,18 @@ export function LiveScreen() {
           </View>
 
           {live.map((match) => {
-            const pick = pickFor(match.id, [0, 0]);
-            const scored = scorePick(pick, match.homeGoals, match.awayGoals);
+            const scored = scorePick(picks[match.id], match.homeGoals, match.awayGoals);
             const pct = Math.min((match.minute / 95) * 100, 100);
             return (
-              <View key={match.id} style={styles.card}>
+              <Pressable
+                key={match.id}
+                style={styles.card}
+                onPress={() =>
+                  router.push({ pathname: "/match/[eventId]", params: { eventId: match.id } })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`${match.home.name} versus ${match.away.name}, match summary`}
+              >
                 <View style={styles.top}>
                   <Text style={styles.liveMin}>{match.minute}' LIVE</Text>
                   <Text style={styles.venue}>{match.venue}</Text>
@@ -81,7 +90,15 @@ export function LiveScreen() {
                   </View>
                 </View>
                 <Text style={styles.note}>
-                  You said <Text style={styles.noteStrong}>{scored.you}</Text> · {scored.note}
+                  {picks[match.id] ? (
+                    <>
+                      You said <Text style={styles.noteStrong}>{scored.you}</Text>
+                      {" · "}
+                      {scored.note}
+                    </>
+                  ) : (
+                    "No pick for this one"
+                  )}
                 </Text>
                 <View style={styles.rail}>
                   <View style={styles.railTrack} />
@@ -111,7 +128,7 @@ export function LiveScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </>
@@ -121,10 +138,17 @@ export function LiveScreen() {
         <>
           <Text style={styles.finishedTitle}>FINISHED TODAY</Text>
           {finished.map((match) => {
-            const pick = pickFor(match.id, [0, 0]);
-            const scored = scorePick(pick, match.homeGoals, match.awayGoals);
+            const scored = scorePick(picks[match.id], match.homeGoals, match.awayGoals);
             return (
-              <View key={match.id} style={styles.finished}>
+              <Pressable
+                key={match.id}
+                style={styles.finished}
+                onPress={() =>
+                  router.push({ pathname: "/match/[eventId]", params: { eventId: match.id } })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`${match.home.name} versus ${match.away.name}, match summary`}
+              >
                 <View style={{ flex: 1 }}>
                   <View style={styles.finishedRow}>
                     <ClubBadge mono={match.home.mono} color={match.home.color} logo={match.home.logo} size={24} />
@@ -132,10 +156,12 @@ export function LiveScreen() {
                     <ClubBadge mono={match.away.mono} color={match.away.color} logo={match.away.logo} size={24} />
                     <Text style={styles.finishedMatch} numberOfLines={1}>{match.home.name} v {match.away.name}</Text>
                   </View>
-                  <Text style={styles.finishedNote}>FT · You said {scored.you}</Text>
+                  <Text style={styles.finishedNote}>
+                    {picks[match.id] ? `FT · You said ${scored.you}` : "FT · No pick"}
+                  </Text>
                 </View>
                 <ResultPill kind={scored.kind}>{scored.pillText}</ResultPill>
-              </View>
+              </Pressable>
             );
           })}
         </>

@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GuestBar } from "@/src/components/guest-bar";
 import { IconPath } from "@/src/components/icons";
 import { TAB_ICONS } from "@/src/lib/data";
 import { colors, fonts } from "@/src/theme";
@@ -26,7 +27,9 @@ function MatchdayTabBar({
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View>
+      <GuestBar />
+      <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const meta = TAB_META[route.name] ?? { label: route.name, icon: TAB_ICONS.picks };
@@ -53,6 +56,7 @@ function MatchdayTabBar({
           </Pressable>
         );
       })}
+      </View>
     </View>
   );
 }

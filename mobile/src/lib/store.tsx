@@ -1,4 +1,4 @@
-﻿import AsyncStorage from "@react-native-async-storage/async-storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   createContext,
@@ -170,10 +170,9 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
   );
 
   const loadPicks = useCallback(async () => {
-    if (!user) {
-      setPicks({});
-      return;
-    }
+    // Signed out: the locally cached picks stay on screen. They are pushed up
+    // on the next sign-in by the migration branch below.
+    if (!user) return;
 
     try {
       const remotePicks = await fetchRemotePicks();
@@ -286,6 +285,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
         try {
           const persisted = JSON.parse(raw) as PersistedState;
           legacyPicksRef.current = persisted.picks ?? {};
+          if (persisted.picks) setPicks(persisted.picks);
           persistedLeagueId.current = persisted.activeLeagueId ?? null;
           setPremiumUnlocked(Boolean(persisted.premiumUnlocked));
         } catch {
@@ -311,14 +311,17 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated.current) return;
+    // Autosave locally on every change so a pick survives a force-quit,
+    // a dropped connection, or being made before sign-in.
     AsyncStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        activeLeagueId: activeLeague?.id ?? null,
+        picks,
+        activeLeagueId: activeLeague?.id ?? undefined,
         premiumUnlocked,
       } satisfies PersistedState),
     );
-  }, [activeLeague, premiumUnlocked]);
+  }, [picks, activeLeague, premiumUnlocked]);
 
   useEffect(() => {
     void loadBoardAndChat(activeLeague);
@@ -420,7 +423,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
 
   const bump = useCallback(
     (id: string, side: 0 | 1, delta: number, locked: boolean) => {
-      if (locked || !user) return;
+      if (locked) return;
       const fixture = fixturesRef.current.find((item) => item.id === id);
       if (!fixture) return;
       const current = (picks[id] ?? fixture.def).slice() as [number, number];
@@ -433,7 +436,7 @@ export function MatchdayProvider({ children }: { children: ReactNode }) {
       popTimer.current = setTimeout(() => setPop(null), 190);
       queueSave(id, current);
     },
-    [picks, queueSave, user],
+    [picks, queueSave],
   );
 
   const createLeague = useCallback(

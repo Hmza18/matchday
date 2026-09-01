@@ -1,6 +1,7 @@
-﻿import type { Wc26FixturesResponse, Wc26PlaysResponse, Wc26ScoreboardResponse } from "@/src/lib/football/types";
+import { API_BASE_URL, API_KEY, REQUEST_TIMEOUT_MS } from "@/src/lib/config";
+import type { Wc26FixturesResponse, Wc26PlaysResponse, Wc26ScoreboardResponse } from "@/src/lib/football/types";
 
-const BASE_URL = "https://worldcup26.ir";
+const BASE_URL = API_BASE_URL;
 
 export const PL_LEAGUE_SLUG = "eng.1";
 
@@ -12,6 +13,48 @@ export function uniqueById<T extends { id: string }>(items: T[]) {
   return [...map.values()];
 }
 
+/** Thrown when the API answers with a 4xx. These are never retried. */
+class ClientError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function requestOnce<T>(url: URL): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (API_KEY) headers["x-api-key"] = API_KEY;
+
+    const response = await fetch(url, { headers, signal: controller.signal });
+
+    if (response.status === 429) {
+      throw new ClientError(429, "Football API rate limit reached. Try again in a moment.");
+    }
+    if (response.status >= 400 && response.status < 500) {
+      throw new ClientError(response.status, `Football API error (${response.status}).`);
+    }
+    if (!response.ok) {
+      throw new Error(`Football API error (${response.status}).`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Fetch with a hard 10s timeout and a single retry.
+ *
+ * Only network/timeout failures are retried; a 4xx is a real answer and
+ * retrying it just doubles the wait. The timeout matters most under Expo
+ * tunnel mode, where a hung request is indistinguishable from a broken app.
+ */
 export async function wc26Fetch<T>(
   path: string,
   params: Record<string, string | number | undefined> = {},
@@ -22,19 +65,13 @@ export async function wc26Fetch<T>(
     url.searchParams.set(name, String(value));
   }
 
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-  });
-
-  if (response.status === 429) {
-    throw new Error("Football API rate limit reached. Try again in a moment.");
+  try {
+    return await requestOnce<T>(url);
+  } catch (error) {
+    if (error instanceof ClientError) throw error;
+    console.warn(`[api] retrying ${path} after ${String(error)}`);
+    return requestOnce<T>(url);
   }
-
-  if (!response.ok) {
-    throw new Error(`Football API error (${response.status}).`);
-  }
-
-  return (await response.json()) as T;
 }
 
 export async function fetchAllFixtures(): Promise<Wc26FixturesResponse> {

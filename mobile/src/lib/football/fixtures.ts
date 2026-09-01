@@ -1,15 +1,36 @@
-﻿import {
+import {
   buildGameweeks,
   currentGameweek,
   fetchAllFixtures,
   gameweekForDate,
   uniqueById,
 } from "@/src/lib/football/client";
+import { MOCK_MODE } from "@/src/lib/config";
 import { mapPickFixture } from "@/src/lib/football/map";
+import { mockFixtures } from "@/src/lib/football/mock";
 import type { PickFixture } from "@/src/lib/football/types";
 
+function mockPayload(requestedGw?: number) {
+  return {
+    season: 2026,
+    gw: requestedGw && requestedGw > 0 ? requestedGw : 7,
+    weeks: [] as string[][],
+    fixtures: mockFixtures(),
+    usedFallback: true,
+  };
+}
+
 export async function loadFixturesForGw(requestedGw?: number) {
-  const payload = await fetchAllFixtures();
+  if (MOCK_MODE) return mockPayload(requestedGw);
+
+  let payload;
+  try {
+    payload = await fetchAllFixtures();
+  } catch (error) {
+    console.warn(`[api] fixtures unavailable, serving bundled data: ${String(error)}`);
+    return mockPayload(requestedGw);
+  }
+
   const weeks = buildGameweeks(payload.league.calendar);
   const now = Date.now();
 
@@ -41,5 +62,6 @@ export async function loadFixturesForGw(requestedGw?: number) {
     gw: activeGw,
     weeks,
     fixtures: uniqueById(fixtures),
+    usedFallback: false,
   };
 }

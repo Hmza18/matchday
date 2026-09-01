@@ -1,5 +1,7 @@
-﻿import { fetchMatchPlays, fetchScoreboard, uniqueById } from "@/src/lib/football/client";
+import { fetchMatchPlays, fetchScoreboard, uniqueById } from "@/src/lib/football/client";
+import { MOCK_MODE } from "@/src/lib/config";
 import { mapLiveMatch, mapPlayItem } from "@/src/lib/football/map";
+import { mockLiveCentre } from "@/src/lib/football/mock";
 import type { LiveEvent, LiveMatch } from "@/src/lib/football/types";
 
 async function enrichEvents(match: LiveMatch): Promise<LiveEvent[]> {
@@ -15,6 +17,16 @@ async function enrichEvents(match: LiveMatch): Promise<LiveEvent[]> {
 }
 
 export async function loadLiveCentre() {
+  if (MOCK_MODE) return mockLiveCentre();
+  try {
+    return await fetchLiveCentre();
+  } catch (error) {
+    console.warn(`[api] live centre unavailable, serving bundled data: ${String(error)}`);
+    return mockLiveCentre();
+  }
+}
+
+async function fetchLiveCentre() {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);

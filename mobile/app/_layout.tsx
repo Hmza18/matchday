@@ -1,4 +1,4 @@
-﻿import "react-native-gesture-handler";
+import "react-native-gesture-handler";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -16,6 +16,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native";
 import { AuthGate } from "@/src/components/auth-gate";
 import { JoinLeagueModal } from "@/src/components/join-modal";
@@ -55,20 +56,24 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AuthProvider>
-        <AuthGate>
-          <MatchdayProvider>
-            <StatusBar style="light" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="sign-in" />
-              <Stack.Screen name="sign-up" />
-              <Stack.Screen name="auth/callback" />
-            </Stack>
-            <JoinLeagueModal />
-          </MatchdayProvider>
-        </AuthGate>
-      </AuthProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <AuthGate>
+            <MatchdayProvider>
+              <StatusBar style="light" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(onboarding)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="sign-in" />
+                <Stack.Screen name="sign-up" />
+                <Stack.Screen name="auth/callback" />
+                <Stack.Screen name="match/[eventId]" options={{ presentation: "modal" }} />
+              </Stack>
+              <JoinLeagueModal />
+            </MatchdayProvider>
+          </AuthGate>
+        </AuthProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

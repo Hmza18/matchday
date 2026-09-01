@@ -1,4 +1,4 @@
-﻿import { Link, useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -17,7 +17,7 @@ import { colors, fonts } from "@/src/theme";
 type Mode = "sign-in" | "sign-up";
 
 export function AuthShell({ mode }: { mode: Mode }) {
-  const { signIn, signUp, signInWithApple } = useAuth();
+  const { signIn, signUp, signInWithApple, continueAsGuest } = useAuth();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -89,24 +89,6 @@ export function AuthShell({ mode }: { mode: Mode }) {
             {isSignUp ? "Takes less than a minute." : "Enter your email and password."}
           </Text>
 
-          <Pressable
-            style={styles.appleBtn}
-            disabled={appleLoading || submitting}
-            onPress={() => void onApple()}
-          >
-            {appleLoading ? (
-              <ActivityIndicator color={colors.light} />
-            ) : (
-              <Text style={styles.appleText}>Continue with Apple</Text>
-            )}
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
-          </View>
-
           {isSignUp ? (
             <View style={styles.field}>
               <Text style={styles.label}>Full name</Text>
@@ -168,6 +150,24 @@ export function AuthShell({ mode }: { mode: Mode }) {
               </Text>
             )}
           </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <Pressable
+            style={styles.appleBtn}
+            disabled={appleLoading || submitting}
+            onPress={() => void onApple()}
+          >
+            {appleLoading ? (
+              <ActivityIndicator color={colors.light} />
+            ) : (
+              <Text style={styles.appleText}>Continue with Apple</Text>
+            )}
+          </Pressable>
         </View>
 
         <Text style={styles.switch}>
@@ -176,6 +176,18 @@ export function AuthShell({ mode }: { mode: Mode }) {
             {isSignUp ? "Sign in" : "Create an account"}
           </Link>
         </Text>
+
+        <Pressable
+          onPress={async () => {
+            await continueAsGuest();
+            router.replace("/(tabs)");
+          }}
+          style={styles.guest}
+          accessibilityRole="button"
+          accessibilityLabel="Look around without an account"
+        >
+          <Text style={styles.guestText}>Look around first</Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -271,4 +283,12 @@ const styles = StyleSheet.create({
   submitText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.light },
   switch: { marginTop: 18, textAlign: "center", fontFamily: fonts.sans, fontSize: 13, color: colors.muted },
   switchLink: { fontFamily: fonts.sansSemi, color: colors.greenDeep },
+  guest: {
+    alignSelf: "center",
+    marginTop: 14,
+    minHeight: 44,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  guestText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.muted },
 });

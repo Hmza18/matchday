@@ -1,13 +1,34 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, RefreshIcon } from "@/src/components/icons";
 import { screenCopy, useMatchday } from "@/src/lib/store";
 import type { TabId } from "@/src/lib/types";
-import { colors, fonts } from "@/src/theme";
+import { colors, fonts, headerStripe } from "@/src/theme";
+
+/**
+ * The design paints repeating 26px vertical bands over the header gradient.
+ * There is no repeating-gradient primitive in React Native, so the bands are
+ * drawn as absolutely positioned views sized to the viewport.
+ */
+function Stripes({ width }: { width: number }) {
+  const stride = headerStripe.width + headerStripe.gap;
+  const count = Math.ceil(width / stride);
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.stripeLayer]}>
+      {Array.from({ length: count }, (_, index) => (
+        <View
+          key={index}
+          style={[styles.stripe, { left: index * stride }]}
+        />
+      ))}
+    </View>
+  );
+}
 
 export function AppHeader({ tab }: { tab: TabId }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { gw, prevGw, nextGw, refresh, leagues } = useMatchday();
   const [kicker, title] = screenCopy(tab, gw, leagues.length);
   const showGw = tab === "picks" || tab === "live";
@@ -19,6 +40,7 @@ export function AppHeader({ tab }: { tab: TabId }) {
       end={{ x: 0.9, y: 1 }}
       style={[styles.wrap, { paddingTop: insets.top + 12 }]}
     >
+      <Stripes width={width} />
       <View style={styles.row}>
         <View style={styles.titles}>
           <Text style={styles.kicker}>{kicker.toUpperCase()}</Text>
@@ -49,6 +71,17 @@ const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: 16,
     paddingBottom: 13,
+    overflow: "hidden",
+  },
+  stripeLayer: {
+    pointerEvents: "none",
+  },
+  stripe: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: headerStripe.width,
+    backgroundColor: headerStripe.color,
   },
   row: {
     minHeight: 34,

@@ -91,3 +91,7 @@ export function CameraIcon({ color = "#F8F8F8" }: { color?: string }) {
     />
   );
 }
+
+export function ArrowRightIcon({ color = "#1F2937" }: { color?: string }) {
+  return <IconPath d="M5 12h14M13 6l6 6-6 6" size={18} color={color} strokeWidth={2.2} />;
+}

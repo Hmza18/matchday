@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CheckIcon, ClockIcon, FlameIcon, MinusIcon, PlusIcon } from "@/src/components/icons";
 import { ClubBadge } from "@/src/components/ui";
@@ -64,7 +64,7 @@ export function PicksScreen() {
       <View style={styles.summary}>
         <Text style={styles.summaryText}>
           {openCount > 0
-            ? `${openCount} fixtures still open. Tap the steppers — every change saves itself.${gwPoints.scored > 0 ? ` GW points so far: ${gwPoints.total % 1 === 0 ? gwPoints.total.toFixed(0) : gwPoints.total.toFixed(1)}.` : ""}`
+            ? `${openCount} ${openCount === 1 ? "fixture" : "fixtures"} still open. Tap the steppers — every change saves itself.${gwPoints.scored > 0 ? ` GW points so far: ${gwPoints.total % 1 === 0 ? gwPoints.total.toFixed(0) : gwPoints.total.toFixed(1)}.` : ""}`
             : "All picks locked in for this gameweek."}
         </Text>
         <View style={styles.countPill}>
@@ -84,6 +84,7 @@ export function PicksScreen() {
         const crit = !locked && left < 900;
         const warn = !locked && left < 7200 && !crit;
         const pick = pickFor(fixture.id, fixture.def);
+        const hasPick = picks[fixture.id] !== undefined;
         const chipColor = locked
           ? { bg: "#F1F3F2", fg: colors.muted }
           : crit
@@ -171,7 +172,9 @@ export function PicksScreen() {
             ) : null}
             {locked ? (
               <Text style={styles.lockedNote}>
-                Submitted {pick[0]}–{pick[1]} · read only
+                {hasPick
+                  ? `Submitted ${pick[0]}–${pick[1]} · read only`
+                  : "No pick — 0 pts"}
               </Text>
             ) : null}
           </View>

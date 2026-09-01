@@ -12,6 +12,7 @@ import {
 import { CameraIcon } from "@/src/components/icons";
 import { PlayerAvatar } from "@/src/components/ui";
 import { useAuth } from "@/src/lib/auth";
+import { resetOnboarding } from "@/src/lib/onboarding";
 import { useMatchday } from "@/src/lib/store";
 import { formatPoints } from "@/src/lib/types";
 import { colors, fonts } from "@/src/theme";
@@ -23,7 +24,29 @@ export function SettingsScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <View style={styles.guestWrap}>
+        <Text style={styles.guestTitle}>You're browsing as a guest</Text>
+        <Text style={styles.guestSub}>Sign in to save picks, join pools, and set a profile.</Text>
+        <Pressable
+          onPress={() => router.push("/sign-in")}
+          style={styles.guestSignIn}
+          accessibilityRole="button"
+        >
+          <Text style={styles.guestSignInText}>Sign in</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            void resetOnboarding().then(() => router.replace("/(onboarding)/welcome"));
+          }}
+          style={styles.replayIntro}
+        >
+          <Text style={styles.replayIntroText}>Replay intro</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   const you = board.find((row) => row.me);
 
@@ -140,6 +163,15 @@ export function SettingsScreen() {
       </View>
 
       <Pressable
+        onPress={() => {
+          void resetOnboarding().then(() => router.replace("/(onboarding)/welcome"));
+        }}
+        style={styles.replayIntro}
+      >
+        <Text style={styles.replayIntroText}>Replay intro</Text>
+      </Pressable>
+
+      <Pressable
         onPress={() => void signOut()}
         style={styles.signOut}
       >
@@ -225,6 +257,29 @@ const styles = StyleSheet.create({
   rowSub: { marginTop: 2, fontFamily: fonts.sans, fontSize: 12, color: colors.muted },
   rowPts: { fontFamily: fonts.headline, fontSize: 18, color: colors.ink },
   chev: { fontFamily: fonts.sans, fontSize: 22, color: colors.muted },
+  guestWrap: { flex: 1, padding: 20, paddingTop: 40 },
+  guestTitle: { fontFamily: fonts.headline, fontSize: 20, color: colors.ink },
+  guestSub: { marginTop: 6, marginBottom: 24, fontFamily: fonts.sans, fontSize: 14, color: colors.muted },
+  guestSignIn: {
+    height: 48,
+    borderRadius: 99,
+    backgroundColor: colors.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  guestSignInText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.light },
+  replayIntro: {
+    height: 48,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  replayIntroText: { fontFamily: fonts.sansSemi, fontSize: 14, color: colors.greenDeep },
   signOut: {
     height: 48,
     borderRadius: 99,

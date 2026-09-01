@@ -1,4 +1,4 @@
-﻿import * as QueryParams from "expo-auth-session/build/QueryParams";
+import * as QueryParams from "expo-auth-session/build/QueryParams";
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseClient } from "@/src/lib/supabase/client";
 
@@ -23,9 +24,15 @@ export type AuthUser = {
   avatarUrl: string | null;
 };
 
+const GUEST_KEY = "matchday-guest";
+
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
+  /** Browsing without an account. Picks are kept on device only. */
+  guest: boolean;
+  continueAsGuest: () => Promise<void>;
+  leaveGuest: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signInWithApple: () => Promise<void>;
@@ -96,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseClient(), []);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guest, setGuest] = useState(false);
 
   const hydrateUser = useCallback(
     async (authUser: User | null) => {
@@ -114,6 +122,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [supabase],
   );
+
+  useEffect(() => {
+    AsyncStorage.getItem(GUEST_KEY)
+      .then((value) => setGuest(value === "true"))
+      .catch(() => setGuest(false));
+  }, []);
+
+  const continueAsGuest = useCallback(async () => {
+    setGuest(true);
+    await AsyncStorage.setItem(GUEST_KEY, "true");
+  }, []);
+
+  const leaveGuest = useCallback(async () => {
+    setGuest(false);
+    await AsyncStorage.removeItem(GUEST_KEY);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -150,8 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) throw new Error(mapAuthError(error.message));
+      await leaveGuest();
     },
-    [supabase],
+    [supabase, leaveGuest],
   );
 
   const signUp = useCallback(
@@ -236,8 +261,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ user, loading, signIn, signUp, signInWithApple, signOut, updateAvatar }),
-    [user, loading, signIn, signUp, signInWithApple, signOut, updateAvatar],
+    () => ({
+      user,
+      loading,
+      guest,
+      continueAsGuest,
+      leaveGuest,
+      signIn,
+      signUp,
+      signInWithApple,
+      signOut,
+      updateAvatar,
+    }),
+    [
+      user,
+      loading,
+      guest,
+      continueAsGuest,
+      leaveGuest,
+      signIn,
+      signUp,
+      signInWithApple,
+      signOut,
+      updateAvatar,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
