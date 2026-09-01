@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pickPoints, scorePick } from "@/src/lib/football/map";
 import type { FinishedResult } from "@/src/lib/football/results";
+import { chunkArray, fetchAllPages, IN_FILTER_CHUNK } from "@/src/lib/paginate";
 import type { BoardRow, ChatMessage, League, PlayerStats } from "@/src/lib/types";
 
 type LeagueRow = {
@@ -96,38 +97,62 @@ export async function fetchLeagueBoard(
   currentGw: number,
   results: FinishedResult[],
 ): Promise<BoardRow[]> {
-  const { data: members, error: memberError } = await supabase
-    .from("league_members")
-    .select("user_id")
-    .eq("league_id", league.id);
+  const memberRows = await fetchAllPages(async (from, to) => {
+    const { data, error } = await supabase
+      .from("league_members")
+      .select("user_id")
+      .eq("league_id", league.id)
+      .range(from, to);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
 
-  if (memberError) throw new Error(memberError.message);
-
-  const memberIds = [...new Set((members ?? []).map((row) => row.user_id as string))];
+  const memberIds = [...new Set(memberRows.map((row) => row.user_id as string))];
   if (memberIds.length === 0) return [];
 
-  const [{ data: profiles, error: profileError }, { data: pickRows, error: pickError }] =
-    await Promise.all([
-      supabase.from("profiles").select("id, full_name, initials, avatar_url").in("id", memberIds),
-      supabase
-        .from("picks")
-        .select("user_id, fixture_id, home_score, away_score")
-        .in("user_id", memberIds),
-    ]);
+  const profiles: ProfileRow[] = [];
+  const pickRows: Array<{
+    user_id: string;
+    fixture_id: string;
+    home_score: number;
+    away_score: number;
+  }> = [];
 
-  if (profileError) throw new Error(profileError.message);
-  if (pickError) throw new Error(pickError.message);
+  for (const idChunk of chunkArray(memberIds, IN_FILTER_CHUNK)) {
+    const [profileChunk, pickChunk] = await Promise.all([
+      fetchAllPages(async (from, to) => {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, full_name, initials, avatar_url")
+          .in("id", idChunk)
+          .range(from, to);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as ProfileRow[];
+      }),
+      fetchAllPages(async (from, to) => {
+        const { data, error } = await supabase
+          .from("picks")
+          .select("user_id, fixture_id, home_score, away_score")
+          .in("user_id", idChunk)
+          .range(from, to);
+        if (error) throw new Error(error.message);
+        return (data ?? []) as typeof pickRows;
+      }),
+    ]);
+    profiles.push(...profileChunk);
+    pickRows.push(...pickChunk);
+  }
 
   const profileMap = new Map<string, ProfileRow>();
-  for (const profile of (profiles ?? []) as ProfileRow[]) {
+  for (const profile of profiles) {
     profileMap.set(profile.id, profile);
   }
 
   const picksByUser = new Map<string, Record<string, [number, number]>>();
-  for (const row of pickRows ?? []) {
-    const userId = row.user_id as string;
+  for (const row of pickRows) {
+    const userId = row.user_id;
     const current = picksByUser.get(userId) ?? {};
-    current[row.fixture_id as string] = [row.home_score as number, row.away_score as number];
+    current[row.fixture_id] = [row.home_score, row.away_score];
     picksByUser.set(userId, current);
   }
 
