@@ -48,7 +48,8 @@
     "lan": "expo start --lan",
     "clear": "expo start --tunnel --clear",
     "doctor": "npx expo-doctor",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/lib/chat-page.test.ts"
   },
   "private": true
 }

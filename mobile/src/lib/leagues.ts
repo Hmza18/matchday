@@ -1,4 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  leagueChatPageQuery,
+  transcriptChronological,
+} from "@/src/lib/chat-page";
 import { pickPoints, scorePick } from "@/src/lib/football/map";
 import type { FinishedResult } from "@/src/lib/football/results";
 import type { BoardRow, ChatMessage, League, PlayerStats } from "@/src/lib/types";
@@ -184,16 +188,17 @@ export async function fetchLeagueMessages(
   leagueId: string,
   currentUserId: string,
 ): Promise<ChatMessage[]> {
+  const chatPage = leagueChatPageQuery();
   const { data, error } = await supabase
     .from("league_messages")
     .select("id, user_id, body, created_at")
     .eq("league_id", leagueId)
-    .order("created_at", { ascending: true })
-    .limit(80);
+    .order("created_at", { ascending: chatPage.ascending })
+    .limit(chatPage.limit);
 
   if (error) throw new Error(error.message);
 
-  const rows = data ?? [];
+  const rows = transcriptChronological(data ?? []);
   const userIds = [...new Set(rows.map((row) => row.user_id as string))];
   const profileMap = new Map<string, ProfileRow>();
 
