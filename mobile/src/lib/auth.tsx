@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -104,9 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [guest, setGuest] = useState(false);
+  const hasUserRef = useRef(false);
+
+  const leaveGuest = useCallback(async () => {
+    setGuest(false);
+    await AsyncStorage.removeItem(GUEST_KEY);
+  }, []);
 
   const hydrateUser = useCallback(
     async (authUser: User | null) => {
+      hasUserRef.current = Boolean(authUser);
       if (!authUser) {
         setUser(null);
         return;
@@ -119,24 +127,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       setUser(mapUser(authUser, profile));
+      // Email sign-in already called leaveGuest; Apple/sign-up from guest did not,
+      // and a stale matchday-guest key would keep AuthGate in guest mode after
+      // sign-out or session expiry.
+      await leaveGuest();
     },
-    [supabase],
+    [leaveGuest, supabase],
   );
 
   useEffect(() => {
+    let cancelled = false;
     AsyncStorage.getItem(GUEST_KEY)
-      .then((value) => setGuest(value === "true"))
-      .catch(() => setGuest(false));
+      .then((value) => {
+        if (cancelled || hasUserRef.current) return;
+        setGuest(value === "true");
+      })
+      .catch(() => {
+        if (cancelled || hasUserRef.current) return;
+        setGuest(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const continueAsGuest = useCallback(async () => {
     setGuest(true);
     await AsyncStorage.setItem(GUEST_KEY, "true");
-  }, []);
-
-  const leaveGuest = useCallback(async () => {
-    setGuest(false);
-    await AsyncStorage.removeItem(GUEST_KEY);
   }, []);
 
   useEffect(() => {
@@ -206,9 +223,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.session) {
         return "Check your email to confirm your account, then sign in.";
       }
+      await leaveGuest();
       return null;
     },
-    [supabase],
+    [leaveGuest, supabase],
   );
 
   const signInWithApple = useCallback(async () => {
@@ -227,14 +245,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
     if (result.type === "success") {
       await createSessionFromUrl(result.url);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) await leaveGuest();
     }
-  }, [supabase]);
+  }, [leaveGuest, supabase]);
 
   const signOut = useCallback(async () => {
+    // Drop guest before clearing the session so AuthGate never sees
+    // user=null + guest=true and keeps the previous account on the tabs.
+    await leaveGuest();
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(mapAuthError(error.message));
     setUser(null);
-  }, [supabase]);
+  }, [leaveGuest, supabase]);
 
   const updateAvatar = useCallback(
     async (uri: string) => {
